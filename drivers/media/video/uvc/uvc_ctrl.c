@@ -20,7 +20,7 @@
 #include <linux/videodev2.h>
 #include <linux/vmalloc.h>
 #include <linux/wait.h>
-#include <asm/atomic.h>
+#include <linux/atomic.h>
 
 #include "uvcvideo.h"
 
@@ -675,11 +675,7 @@ static struct uvc_control_mapping uvc_ctrl_mappings[] = {
 
 static inline __u8 *uvc_ctrl_data(struct uvc_control *ctrl, int id)
 {
-    #if 0       /* ddl@rock-chips.com: address must align to 4-bytes */
 	return ctrl->uvc_data + id * ctrl->info.size;
-    #else
-    return ctrl->uvc_data + id * ((ctrl->info.size+3)/4*4);
-    #endif
 }
 
 static inline int uvc_test_bit(const __u8 *data, int bit)
@@ -1020,7 +1016,8 @@ int uvc_query_v4l2_menu(struct uvc_video_chain *chain,
 
 	menu_info = &mapping->menu_info[query_menu->index];
 
-	if (ctrl->info.flags & UVC_CTRL_FLAG_GET_RES) {
+	if (mapping->data_type == UVC_CTRL_DATA_TYPE_BITMASK &&
+	    (ctrl->info.flags & UVC_CTRL_FLAG_GET_RES)) {
 		s32 bitmap;
 
 		if (!ctrl->cached) {
@@ -1229,7 +1226,8 @@ int uvc_ctrl_set(struct uvc_video_chain *chain,
 		/* Valid menu indices are reported by the GET_RES request for
 		 * UVC controls that support it.
 		 */
-		if (ctrl->info.flags & UVC_CTRL_FLAG_GET_RES) {
+		if (mapping->data_type == UVC_CTRL_DATA_TYPE_BITMASK &&
+		    (ctrl->info.flags & UVC_CTRL_FLAG_GET_RES)) {
 			if (!ctrl->cached) {
 				ret = uvc_ctrl_populate_cache(chain, ctrl);
 				if (ret < 0)
@@ -1594,13 +1592,8 @@ static int uvc_ctrl_add_info(struct uvc_device *dev, struct uvc_control *ctrl,
 	INIT_LIST_HEAD(&ctrl->info.mappings);
 
 	/* Allocate an array to save control values (cur, def, max, etc.) */
-    #if 0           /* ddl@rock-chips.com: address must align to 4-bytes */
 	ctrl->uvc_data = kzalloc(ctrl->info.size * UVC_CTRL_DATA_LAST + 1,
 				 GFP_KERNEL);
-    #else
-    ctrl->uvc_data = kzalloc(((ctrl->info.size+3)/4*4) * UVC_CTRL_DATA_LAST + 1,
-				 GFP_KERNEL);
-    #endif
 	if (ctrl->uvc_data == NULL) {
 		ret = -ENOMEM;
 		goto done;
@@ -1673,8 +1666,8 @@ int uvc_ctrl_add_mapping(struct uvc_video_chain *chain,
 		return -EINVAL;
 	}
 
-	/* Search for the matching (GUID/CS) control in the given device */
-	list_for_each_entry(entity, &dev->entities, list) {
+	/* Search for the matching (GUID/CS) control on the current chain */
+	list_for_each_entry(entity, &chain->entities, chain) {
 		unsigned int i;
 
 		if (UVC_ENTITY_TYPE(entity) != UVC_VC_EXTENSION_UNIT ||

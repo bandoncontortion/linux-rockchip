@@ -105,6 +105,9 @@ int v4l2_ctrl_check(struct v4l2_ext_control *ctrl, struct v4l2_queryctrl *qctrl,
 		    menu_items[ctrl->value][0] == '\0')
 			return -EINVAL;
 	}
+	if (qctrl->type == V4L2_CTRL_TYPE_BITMASK &&
+			(ctrl->value & ~qctrl->maximum))
+		return -ERANGE;
 	return 0;
 }
 EXPORT_SYMBOL(v4l2_ctrl_check);
@@ -484,15 +487,12 @@ static unsigned int clamp_align(unsigned int x, unsigned int min,
 	/* Bits that must be zero to be aligned */
 	unsigned int mask = ~((1 << align) - 1);
 
+	/* Clamp to aligned min and max */
+	x = clamp(x, (min + ~mask) & mask, max & mask);
+
 	/* Round to nearest aligned value */
 	if (align)
 		x = (x + (1 << (align - 1))) & mask;
-
-	/* Clamp to aligned value of min and max */
-	if (x < min)
-		x = (min + ~mask) & mask;
-	else if (x > max)
-		x = max & mask;
 
 	return x;
 }

@@ -1601,7 +1601,7 @@ static int saa711x_probe(struct i2c_client *client,
 			V4L2_CID_CHROMA_AGC, 0, 1, 1, 1);
 	state->gain = v4l2_ctrl_new_std(hdl, &saa711x_ctrl_ops,
 			V4L2_CID_CHROMA_GAIN, 0, 127, 1, 40);
-	state->gain->is_volatile = 1;
+	state->gain->has_volatiles = 1;
 	sd->ctrl_handler = hdl;
 	if (hdl->error) {
 		int err = hdl->error;

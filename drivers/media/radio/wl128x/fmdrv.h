@@ -33,7 +33,7 @@
 #include <media/v4l2-common.h>
 #include <media/v4l2-ctrls.h>
 
-#define FM_DRV_VERSION            "0.10"
+#define FM_DRV_VERSION            "0.1"
 /* Should match with FM_DRV_VERSION */
 #define FM_DRV_RADIO_VERSION      KERNEL_VERSION(0, 0, 1)
 #define FM_DRV_NAME               "ti_fmdrv"
